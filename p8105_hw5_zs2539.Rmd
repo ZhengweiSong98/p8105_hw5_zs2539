@@ -155,7 +155,7 @@ prop_cities %>%
 
 ## Problem 3
 ```{r, warning = FALSE, message=FALSE}
-# Construct function for one-sample t-test with n=30, sigma=5, mu=0
+# Construct function for one-sample t-test with n=30, sigma=5
 t_test = function(n = 30, mu, sigma = 5){
     
   sim_data = tibble(x = rnorm(n, mean = mu, sd = sigma)) 
@@ -170,7 +170,7 @@ t_test = function(n = 30, mu, sigma = 5){
 }
 
 # Generate 5000 datasets from the model and repeat the t-test for mu = 0,1,2,3,4,5,6
-set.seed(1)
+set.seed(2022)
 sim_result = 
   tibble(mu = c(0:6)) %>% 
   mutate(
@@ -199,9 +199,7 @@ sim_result  %>%
     y = "Proportion of times the null was rejected")
 ```
 
-* With the true mean increases and goes away from 0, the proportion of times that the null hypothesis was rejected increases as well, approaching to 1. When the difference between true mean and the null is large enough, the growth rate of proportion slows down, getting closer to 1. The larger the effect size, the greater the power, that is, the power of the test is positively correlated with the effect size. 
-
-
+* As the true mean increases from 0 to 6, the proportion of times the null hypothesis is rejected increases accordingly (from 0.051 until 1). Also, the proportion of times the null was rejected (the power of the test) growth becomes slower when the true mean is sufficiently different from 0 (true mean ≥ 3). Thus, the larger effect size, the greater the power, i.e., they are positively correlated.
 
 ```{r, warning=FALSE, message=FALSE}
 # Make a plot showing the average estimate of mu on the y axis and the true value of mu on the x axis
@@ -209,8 +207,8 @@ sim_result %>%
   group_by(mu) %>% 
   summarise(avg_estimate = mean(estimate)) %>% 
   ggplot(aes(x = mu, y = avg_estimate)) +
-  geom_point(alpha = 0.8) +
-  geom_line(alpha = 0.8) +
+  geom_point(alpha = .8) +
+  geom_line(alpha = .8) +
   geom_text(aes(label = round(avg_estimate,2)), vjust = -1, size = 3) + 
   scale_x_continuous(limits = c(0,6.5), breaks = seq(0,6,1)) +
   scale_y_continuous(limits = c(-0.1,6.5), breaks = seq(0,6,1)) +
@@ -219,6 +217,7 @@ sim_result %>%
     x = "True mean",
     y = "Average estimate mean"
   ) 
+
 # Make a second plot (or overlay on the first) the average estimate of mu only in samples for which the null was rejected on the y axis and the true value of mu on the x axis
 sim_rej = sim_result %>% 
   filter(p_value < 0.05) %>% 
@@ -243,8 +242,6 @@ sim_result %>%
   scale_color_manual(values = c("Total samples" = "#4393C3", "Rejected samples" = "#D6604D"))
 ```
 
+* For the total samples, the average estimated mean $\hat{\mu}$ is almost equal to the true mean. While for the rejected samples, the average estimated mean $\hat{\mu}$ is obviously higher than the true mean $\mu$ when the true mean $\mu$ is close to 0 ($\mu$<3).
 
-* For the total samples, the average estimate means are approximately equal to the true means.
-* However, for the rejected samples, when the $\mu$ is equal to 0, 1, 2 and 3, the sample average of $\hat{\mu}$ across tests for which the null is rejected is different from the true value of $\mu$. When $\mu$ is equal to 4, 5 and 6, the rejected average estimates are close to the true mean of $\mu$.
-* This is because the probability that the null hypothesis is rejected increases with effect size increases. When we simulate samples with higher true means, we obtain a larger detectable effect size, which allows us to reject the null hypothesis more correctly. This again, has to do with the statistical power.
-
+The reason is that the probability of rejecting the null hypothesis increases with the increase of effect size. When samples with higher true means $\mu$ are simulated, larger detectable effects were obtained, i.e. a rise in statistical power, resulting in a boost concerning correctness of rejecting the null, 
