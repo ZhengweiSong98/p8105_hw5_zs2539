@@ -152,7 +152,7 @@ prop_cities %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   labs(
     title = "Estimates and 95% CIs of Proportion of Unsolved Homicides in All Cities",
-    x = "City",
+    x = "City, state",
     y = "Estimate")
 ```
 
