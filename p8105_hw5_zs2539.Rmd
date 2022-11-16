@@ -97,7 +97,7 @@ homicide_df = homicide_raw %>%
     mutate(reported_date =
                as.Date(as.character(reported_date), format = "%Y%m%d"),
            city_state = str_c(city, state, sep = ", "),
-           resolved = case_when(
+           resolution = case_when(
       disposition == "Closed without arrest" ~ "unsolved",
       disposition == "Open/No arrest" ~ "unsolved",
       disposition == "Closed by arrest" ~ "solved",
@@ -111,7 +111,7 @@ homicide_df = homicide_raw %>%
 summary_hom_df = homicide_df %>% 
   group_by(city_state) %>% 
   summarize(
-    hom_unsolved = sum(resolved == "unsolved"),
+    hom_unsolved = sum(resolution == "unsolved"),
     hom_total = n()
   )
 summary_hom_df %>% 
