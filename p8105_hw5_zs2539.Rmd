@@ -32,7 +32,7 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 
 The code chunk below imports the data in individual spreadsheets contained in `./data/zip_data/`. To do this, I create a dataframe that includes the list of all files in that directory and the complete path to each file. As a next step, I `map` over paths and import data using the `read_csv` function. Finally, I `unnest` the result of `map`.
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 full_df = 
   tibble(
     files = list.files("data/zip_data/"),
@@ -44,7 +44,7 @@ full_df =
 
 The result of the previous code chunk isn't tidy -- data are wide rather than long, and some important variables are included as parts of others. The code chunk below tides the data using string manipulations on the file, converting from wide to long, and selecting relevant variables. 
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 tidy_df = 
   full_df %>% 
   mutate(
@@ -61,7 +61,7 @@ tidy_df =
 
 Finally, the code chunk below creates a plot showing individual data, faceted by group. 
 
-```{r}
+```{r, warning = FALSE, message=FALSE}
 tidy_df %>% 
   ggplot(aes(x = week, y = outcome, group = subj, color = group)) + 
   geom_point() + 
