@@ -71,3 +71,84 @@ tidy_df %>%
 
 This plot suggests high within-subject correlation -- subjects who start above average end up above average, and those that start below average end up below average. Subjects in the control group generally don't change over time, but those in the experiment group increase their outcome in a roughly linear way. 
 
+## Problem 2
+
+```{r, warning = FALSE, message=FALSE}
+# Import the homicide dataset
+homicide_raw = read_csv("./data/homicide-data.csv")
+head(homicide_raw)
+```
+
+* Homicide data collected by the Washington Post for 50 major U.S. cities reported `r homicide_raw %>% nrow()` criminal homicides for a ten-year period, including `r homicide_raw %>% ncol()` variables, such as `r homicide_raw %>% names`.
+
+* The `reported_date`, longitude `lon`, latitude `lat` were noted as numeric variables, while `age` is a character variable, and others as character variables.
+
+* Also, there are `r sum(is.na(homicide_raw$lat))` missing values of latitude and `r sum(is.na(homicide_raw$lon))` of longitude. Also, the city Tulsa, OK was incorrectly labeled in AL, and this observation will be dropped from subsequent data analysis.
+
+* In addition, some entries for victim race, age, and sex were reported as unknown.
+
+```{r, warning = FALSE, message=FALSE}
+# Clean dataset, create the variable city_state, and mutate the disposition data as solved or not
+homicide_df = homicide_raw %>% 
+    janitor::clean_names() %>%
+    mutate(reported_date =
+               as.Date(as.character(reported_date), format = "%Y%m%d"),
+           city_state = str_c(city, state, sep = ", "),
+           resolved = case_when(
+      disposition == "Closed without arrest" ~ "unsolved",
+      disposition == "Open/No arrest" ~ "unsolved",
+      disposition == "Closed by arrest" ~ "solved",
+    )) %>%
+    relocate(city_state) %>%
+    filter(city_state != "Tulsa, AL")
+```
+
+```{r, warning = FALSE, message=FALSE}
+# summarize within cities to obtain the total number of homicides and the number of unsolved homicides
+summary_hom_df = homicide_df %>% 
+  group_by(city_state) %>% 
+  summarize(
+    hom_total = n(),
+    hom_unsolved = sum(resolved == "unsolved")
+  )
+summary_hom_df %>% 
+  knitr::kable(align = "lrr", 
+               col.names = c("City", "Total number of homicides", "Number of unsovled homicides"))
+```
+
+```{r, warning = FALSE, message=FALSE}
+# estimate the proportion of homicides that are unsolved, save the output as an R object, pull the estimated proportion and confidence intervals
+prop_baltimore = prop.test(
+  summary_hom_df %>% filter(city_state == "Baltimore, MD") %>% pull(hom_unsolved), 
+  summary_hom_df %>% filter(city_state == "Baltimore, MD") %>% pull(hom_total)) 
+prop_baltimore %>% broom::tidy()
+```
+
+```{r, warning = FALSE, message=FALSE}
+# iterate to estimate the proportion of unsolved homicides in all cities
+prop_cities = 
+  summary_hom_df %>% 
+  mutate(
+    prop_tests = purrr::map2(.x = hom_unsolved, .y = hom_total, ~prop.test(x = .x, n = .y)),
+    tidy_tests = purrr::map(.x = prop_tests, ~broom::tidy(.x))
+  ) %>% 
+  select(-prop_tests) %>% 
+  unnest(tidy_tests) %>% 
+  select(city_state, estimate, conf.low, conf.high)
+```
+
+```{r, warning = FALSE, message=FALSE}
+# Create a plot showing the estimates and CIs for each city
+prop_cities %>% 
+  mutate(city_state = fct_reorder(city_state, estimate)) %>% 
+  ggplot(aes(x = city_state, y = estimate)) +
+  geom_point() + 
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  labs(
+    title = "Estimates and 95% CIs of Proportion of Unsolved Homicides in All Cities",
+    x = "City",
+    y = "Estimate")
+```
+
+&nbsp;
