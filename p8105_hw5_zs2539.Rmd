@@ -248,6 +248,6 @@ sim_result_df %>%
   scale_color_manual(values = c("Total samples" = "#7B68EE", "Rejected samples" = "#C71585"))
 ```
 
-* For the total samples, the average estimated mean $\hat{\mu}$ is almost equal to the true mean. While for the rejected samples, the average estimated mean $\hat{\mu}$ is obviously higher than the true mean $\mu$ when the true mean $\mu$ is close to 0 ($\mu$<3).
+* For the total samples, the average estimated mean $\hat{\mu}$ is almost equal to the true mean. While for the rejected samples, the average estimated mean $\hat{\mu}$ is obviously higher than the true mean $\mu$ when the true mean $\mu$ is close to 0 ( $\mu$<3).
 
 * The reason is that the probability of rejecting the null hypothesis increases with the increase of effect size. When samples with higher true means $\mu$ are simulated, larger detectable effects were obtained, i.e. a rise in statistical power, resulting in a boost concerning correctness of rejecting the null, 
