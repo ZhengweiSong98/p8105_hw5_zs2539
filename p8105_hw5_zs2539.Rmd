@@ -213,7 +213,7 @@ sim_result %>%
   scale_x_continuous(limits = c(0,6.5), breaks = seq(0,6,1)) +
   scale_y_continuous(limits = c(-0.1,6.5), breaks = seq(0,6,1)) +
   labs(
-    title = "Association between average estimates and true mean",
+    title = "Association between average estimate mean and true mean",
     x = "True mean",
     y = "Average estimate mean"
   ) 
@@ -238,9 +238,9 @@ sim_result %>%
   scale_y_continuous(limits = c(-0.5,6.5), breaks = seq(0,6,1)) +
   labs(x = "True mean",
        y = "Average estimate mean",
-       title = "Association between average estimates and true mean",
+       title = "Association between average estimate mean and true mean",
        color = "Type") +
-  scale_color_manual(values = c("Total samples" = "#4393C3", "Rejected samples" = "#D6604D"))
+  scale_color_manual(values = c("Total samples" = "#7B68EE", "Rejected samples" = "#C71585"))
 ```
 
 * For the total samples, the average estimated mean $\hat{\mu}$ is almost equal to the true mean. While for the rejected samples, the average estimated mean $\hat{\mu}$ is obviously higher than the true mean $\mu$ when the true mean $\mu$ is close to 0 ($\mu$<3).
