@@ -75,13 +75,13 @@ tidy_df %>%
 
 ## Problem 2
 
+#### Importing the homicide dataset
 ```{r, warning = FALSE, message=FALSE}
-# Import the homicide dataset
 homicide_raw = read_csv("./data/homicide-data.csv")
 head(homicide_raw)
 ```
 
-* Homicide data collected by the Washington Post for 50 major U.S. cities reported `r homicide_raw %>% nrow()` criminal homicides for a ten-year period, including `r homicide_raw %>% ncol()` variables, such as `r homicide_raw %>% names`.
+* Homicide data collected by the Washington Post for 50 major U.S. cities reported `r nrow(homicide_raw)` criminal homicides for a ten-year period, including `r ncol(homicide_raw)` variables, such as `r names(homicide_raw)`.
 
 * The `reported_date`, longitude `lon`, latitude `lat` were noted as numeric variables, while `age` is a character variable, and others as character variables.
 
@@ -89,50 +89,55 @@ head(homicide_raw)
 
 * In addition, some entries for victim race, age, and sex were reported as unknown.
 
+#### Cleaning dataset, creating the variable `city_state` and arranging the column `disposition` so we can read the number of total and unsolved murders by city-state
 ```{r, warning = FALSE, message=FALSE}
-# Clean dataset, create the variable city_state
-# mutate the disposition data as solved or not
 homicide_df = homicide_raw %>% 
     janitor::clean_names() %>%
-    mutate(reported_date =
-               as.Date(as.character(reported_date), format = "%Y%m%d"),
-           city_state = str_c(city, state, sep = ", "),
-           resolution = case_when(
-      disposition == "Closed without arrest" ~ "unsolved",
-      disposition == "Open/No arrest" ~ "unsolved",
-      disposition == "Closed by arrest" ~ "solved",
+    mutate(
+        reported_date = as.Date(as.character(reported_date), format = "%Y%m%d"),
+        city_state = str_c(city, state, sep = ", "),
+        resolution = case_when(
+            disposition == "Closed without arrest" ~ "unsolved",
+            disposition == "Open/No arrest" ~ "unsolved",
+            disposition == "Closed by arrest" ~ "solved",
     )) %>%
     relocate(city_state) %>%
     filter(city_state != "Tulsa, AL")
 ```
 
+#### Summarizing within cities to obtain the total number of homicides and the number of unsolved homicides
 ```{r, warning = FALSE, message=FALSE}
-# summarize within cities to obtain the total number of homicides and the number of unsolved homicides
-summary_hom_df = homicide_df %>% 
-  group_by(city_state) %>% 
-  summarize(
-    hom_unsolved = sum(resolution == "unsolved"),
-    hom_total = n()
+city_homicide_df = homicide_df %>%
+    group_by(city_state) %>%
+    summarize(
+        hom_unsolved = sum(resolution == "unsolved"),
+        hom_total = n()
   )
-summary_hom_df %>% 
-  knitr::kable(align = "lrr", 
-               col.names = c("City", "Number of unsovled homicides", "Total number of homicides"))
+
+city_homicide_df %>% knitr::kable(col.names = c("City", "Unsolved Murders", "Total Murders"))
 ```
 
+#### Estimating and saving the proportion of homicides that are unsolved in Baltimore, MD, and pulling the estimated proportion and confidence intervals
 ```{r, warning = FALSE, message=FALSE}
-# estimate the proportion of homicides that are unsolved, 
-# save the output as an R object, 
-# pull the estimated proportion and confidence intervals
-prop_baltimore = prop.test(
-  summary_hom_df %>% filter(city_state == "Baltimore, MD") %>% pull(hom_unsolved), 
-  summary_hom_df %>% filter(city_state == "Baltimore, MD") %>% pull(hom_total)) 
-prop_baltimore %>% broom::tidy()
+baltimore_df = homicide_df %>%
+  filter(city_state == "Baltimore, MD")
+
+baltimore_summary = baltimore_df %>% 
+  summarize(
+    unsolved = sum(resolution == "unsolved"),
+    n = n()
+  )
+
+baltimore_test = prop.test(
+    x = baltimore_summary %>% pull(unsolved),
+    n = baltimore_summary %>% pull(n))
+
+baltimore_test %>% broom::tidy()
 ```
 
+#### Iterating to estimate the proportion of unsolved homicides in all cities
 ```{r, warning = FALSE, message=FALSE}
-# iterate to estimate the proportion of unsolved homicides in all cities
-prop_cities = 
-  summary_hom_df %>% 
+prop_cities = city_homicide_df %>% 
   mutate(
     prop_tests = purrr::map2(.x = hom_unsolved, .y = hom_total, ~prop.test(x = .x, n = .y)),
     tidy_tests = purrr::map(.x = prop_tests, ~broom::tidy(.x))
@@ -140,10 +145,12 @@ prop_cities =
   select(-prop_tests) %>% 
   unnest(tidy_tests) %>% 
   select(city_state, estimate, conf.low, conf.high)
+
+head(prop_cities)
 ```
 
-```{r, warning = FALSE, message=FALSE}
-# Create a plot showing the estimates and CIs for each city
+#### Creating a plot showing the estimates and CIs for each city
+```{r}
 prop_cities %>% 
   mutate(city_state = fct_reorder(city_state, estimate)) %>% 
   ggplot(aes(x = city_state, y = estimate)) +
@@ -151,7 +158,7 @@ prop_cities %>%
   geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   labs(
-    title = "Estimates and 95% CIs of Proportion of Unsolved Homicides in All Cities",
+    title = "Estimated proportions and 95% CIs of unsolved murders by city",
     x = "City, state",
     y = "Estimate")
 ```
@@ -159,24 +166,25 @@ prop_cities %>%
 &nbsp;
 
 ## Problem 3
+#### Constructing the function for one-sample t-test
 ```{r, warning = FALSE, message=FALSE}
-# Construct function for one-sample t-test with n=30, sigma=5
 t_test = function(n = 30, mu, sigma = 5){
+
+    sim_data = tibble(x = rnorm(n, mean = mu, sd = sigma)) 
     
-  sim_data = tibble(x = rnorm(n, mean = mu, sd = sigma)) 
-    
-  test_data = t.test(sim_data, mu = 0, conf.level = 0.95)
+    test_data = t.test(sim_data, mu = 0, conf.level = 0.95)
   
-  sim_data %>% 
-    summarize(
-      estimate = pull(broom::tidy(test_data), estimate),
+    sim_data %>% summarize(
+      estimated_mu = pull(broom::tidy(test_data), estimate),
       p_value = pull(broom::tidy(test_data), p.value)
     )
 }
+```
 
-# Generate 5000 datasets from the model and repeat the t-test for mu = 0,1,2,3,4,5,6
+#### Generating 5000 datasets from the model and repeating the t-test for $\mu$ = 0,1,2,3,4,5,6
+```{r, warning = FALSE, message=FALSE}
 set.seed(2022)
-sim_result_df = 
+sim_results_df = 
   tibble(mu = c(0:6)) %>% 
   mutate(
     output_list = map(.x = mu, ~rerun(5000, t_test(mu = .x))),
@@ -186,66 +194,67 @@ sim_result_df =
   unnest(estimate_df)
 ```
 
+# Plot showing the proportion of times the null was rejected vs the true mean $\mu$
 ```{r, warning = FALSE, message=FALSE}
-# Make a plot showing the proportion of times the null was rejected on the y axis and the true value of mu on the x axis
-sim_result_df  %>% 
+sim_results_df  %>% 
   group_by(mu) %>%
   filter(p_value < 0.05) %>% 
-  summarize(rej_num = n(), rej_prop = rej_num/5000) %>% 
+  summarize(rej_count = n(), rej_prop = rej_count/5000) %>% 
   ggplot(aes(x = mu, y = rej_prop)) + 
-  geom_point(alpha = .8) +
-  geom_line(alpha = .8) +
+  geom_point() +
+  geom_line() +
   geom_text(aes(label = round(rej_prop, 3)), vjust = -1, size = 3) + 
-  scale_x_continuous(limits = c(0,6), breaks = seq(0, 6, 1)) +
-  scale_y_continuous(limits = c(0,1), breaks = seq(0, 1, .2)) +
+  scale_x_continuous(n.breaks = 8) +
+  scale_y_continuous(n.breaks = 8, limits = c(-0.01,1.03)) +
   labs(
     title = "Association between effect size and power of the t-test",
     x = "True mean",
-    y = "Proportion of times the null was rejected")
+    y = "Proportion of rejecting the null")
 ```
 
 * As the true mean increases from 0 to 6, the proportion of times the null hypothesis is rejected increases accordingly (from 0.051 until 1). Also, the proportion of times the null was rejected (the power of the test) growth becomes slower when the true mean is sufficiently different from 0 (true mean ≥ 3). Thus, the larger effect size, the greater the power, i.e., they are positively correlated.
 
+#### Plot showing the average estimate $\hat{\mu}$ vs the true mean $\mu$ in total and null-rejected samples
 ```{r, warning=FALSE, message=FALSE}
-# Make a plot showing the average estimate of mu on the y axis and the true value of mu on the x axis
-sim_result_df %>% 
+sim_results_df %>% 
   group_by(mu) %>% 
-  summarise(avg_estimate = mean(estimate)) %>% 
-  ggplot(aes(x = mu, y = avg_estimate)) +
-  geom_point(alpha = .8) +
-  geom_line(alpha = .8) +
-  geom_text(aes(label = round(avg_estimate,2)), vjust = -1, size = 3) + 
-  scale_x_continuous(limits = c(0,6.5), breaks = seq(0,6,1)) +
-  scale_y_continuous(limits = c(-0.1,6.5), breaks = seq(0,6,1)) +
+  summarize(avg_estimated_mu = mean(estimated_mu)) %>% 
+  ggplot(aes(x = mu, y = avg_estimated_mu)) +
+  geom_point() +
+  geom_line() +
+  geom_text(aes(label = round(avg_estimated_mu,3)), vjust = -1, size = 3) + 
+  scale_x_continuous(n.breaks = 7) +
+  scale_y_continuous(n.breaks = 7) +
   labs(
-    title = "Association between average estimate mean and true mean",
+    title = "Association between average estimated mean and true mean",
     x = "True mean",
     y = "Average estimate mean"
   ) 
+```
 
-# Make a second plot the average estimate of mu in null-rejected samples on the y axis and the true value of mu on the x axis
-sim_rej = sim_result_df %>% 
+```{r, warning=FALSE, message=FALSE}
+sim_rej = sim_results_df %>% 
   filter(p_value < 0.05) %>% 
   group_by(mu) %>% 
-  summarise(avg_estimate = mean(estimate)) 
+  summarise(avg_estimated_mu = mean(estimated_mu)) 
 
-sim_result_df %>% 
+sim_results_df %>% 
   group_by(mu) %>% 
-  summarise(avg_estimate = mean(estimate)) %>% 
-  ggplot(aes(x = mu, y = avg_estimate, color = "Total samples")) +
+  summarise(avg_estimated_mu = mean(estimated_mu)) %>% 
+  ggplot(aes(x = mu, y = avg_estimated_mu, color = "Total samples")) +
   geom_point() +
   geom_line() + 
-  geom_text(aes(label = round(avg_estimate,2)), vjust = 2, size = 3) + 
+  geom_text(aes(label = round(avg_estimated_mu,2)), vjust = 2, size = 3) + 
   geom_point(data = sim_rej, aes(color = "Rejected samples")) +
-  geom_line(data = sim_rej, aes(x = mu, y = avg_estimate, color = "Rejected samples")) + 
-  geom_text(data = sim_rej, aes(label = round(avg_estimate,2), color = "Rejected samples"), vjust = -1, size = 3) + 
-  scale_x_continuous(limits = c(0,6.5), breaks = seq(0,6,1)) +
-  scale_y_continuous(limits = c(-0.5,6.5), breaks = seq(0,6,1)) +
+  geom_line(data = sim_rej, aes(x = mu, y = avg_estimated_mu, color = "Rejected samples")) + 
+  geom_text(data = sim_rej, aes(label = round(avg_estimated_mu,3), color = "Rejected samples"), vjust = -1, size = 3) + 
+  scale_x_continuous(n.breaks = 7) +
+  scale_y_continuous(n.breaks = 7, limits = c(-0.5,6.5)) +
   labs(x = "True mean",
        y = "Average estimate mean",
        title = "Association between average estimate mean and true mean",
        color = "Type") +
-  scale_color_manual(values = c("Total samples" = "#7B68EE", "Rejected samples" = "#C71585"))
+  scale_color_manual(values = c("Total samples" = "black", "Rejected samples" = "red"))
 ```
 
 * For the total samples, the average estimated mean $\hat{\mu}$ is almost equal to the true mean. While for the rejected samples, the average estimated mean $\hat{\mu}$ is obviously higher than the true mean $\mu$ when the true mean $\mu$ is close to 0 ( $\mu$<3).
