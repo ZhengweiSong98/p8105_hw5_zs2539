@@ -184,6 +184,7 @@ t_test = function(n = 30, mu, sigma = 5){
 #### Generating 5000 datasets from the model and repeating the t-test for $\mu$ = 0,1,2,3,4,5,6
 ```{r, warning = FALSE, message=FALSE}
 set.seed(2022)
+
 sim_results_df = 
   tibble(mu = c(0:6)) %>% 
   mutate(
@@ -212,7 +213,7 @@ sim_results_df  %>%
     y = "Proportion of rejecting the null")
 ```
 
-* As the true mean increases from 0 to 6, the proportion of times the null hypothesis is rejected increases accordingly (from 0.051 until 1). Also, the proportion of times the null was rejected (the power of the test) growth becomes slower when the true mean is sufficiently different from 0 (true mean ≥ 3). Thus, the larger effect size, the greater the power, i.e., they are positively correlated.
+* As the true mean increases from 0 to 6, the proportion of times the null hypothesis is rejected increases accordingly (from 0.05 until 1). Also, the proportion of times the null was rejected (the power of the test) growth becomes slower when the true mean is sufficiently different from 0 (true mean ≥ 3). Thus, the larger effect size, the greater the power, i.e., they are positively correlated.
 
 #### Plot showing the average estimated $\hat{\mu}$ vs the true mean $\mu$ in total and null-rejected samples
 ```{r, warning=FALSE, message=FALSE}
@@ -257,6 +258,6 @@ sim_results_df %>%
   scale_color_manual(values = c("Total samples" = "black", "Rejected samples" = "red"))
 ```
 
-* For the total samples, the average estimated mean $\hat{\mu}$ is almost equal to the true mean. While for the rejected samples, the average estimated mean $\hat{\mu}$ is obviously higher than the true mean $\mu$ when the true mean $\mu$ is close to 0 ( $\mu$<3).
+* For the total samples, the average estimated mean $\hat{\mu}$ is almost equal to the true mean. While for the rejected samples, the average estimated mean $\hat{\mu}$ is obviously higher than the true mean $\mu$ when the true mean $\mu$ is close to 0 ( $\mu$ less than 3).
 
 * The reason is that the probability of rejecting the null hypothesis increases with the increase of effect size. When samples with higher true means $\mu$ are simulated, larger detectable effects were obtained, i.e. a rise in statistical power, resulting in a boost concerning correctness of rejecting the null, 
